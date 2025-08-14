@@ -4,10 +4,10 @@ import numpy as np, matplotlib.pyplot as plt, math
 RADIUS = 10 # metres
 DISK_RES = 200 # pixels per metre
 PIX_RADIUS = RADIUS * DISK_RES
-NUM_BINS = int(14 * PIX_RADIUS ** (1/3))
+NUM_BINS = int(56 * PIX_RADIUS ** (1/3))
 U_MAX = 5.0 / math.sqrt(RADIUS)
 BIN_WIDTH = 2 * U_MAX / NUM_BINS
-ALPHA = 1.4
+ALPHA = 0.4
 
 def get_u(x, y):
     r2 = x*x + y*y
@@ -68,7 +68,7 @@ def generate_disk_img(data: list[float, float], adjust_contrast: bool = True) ->
     plt.colorbar()
     plt.show()
 
-def make_u_intensities(brightness_grid: list[float, float], plot: bool = True) -> list[float]:
+def make_u_intensities(brightness_grid: list[float, float]) -> list[float]:
     # bin_starts = np.linspace(-U_MAX, U_MAX, NUM_BINS, endpoint=False)
 
     bin_edges = np.linspace(-U_MAX, U_MAX, NUM_BINS + 1)
@@ -91,18 +91,34 @@ def make_u_intensities(brightness_grid: list[float, float], plot: bool = True) -
             if bin_index < 0 or bin_index >= NUM_BINS:
                 continue
             u_intensities[bin_index, 1] += brightness
-    
-    if (plot):
-        plt.plot(bin_starts, u_intensities[:, 1])
-        plt.grid(True)
-        plt.show()
 
     return u_intensities
 
-def flatten_spike(u_intents: list[float]) -> list[float]:
-    return u_intents
+def plot_u_intensities(u_intensities: list[float, float]) -> None:
+    bin_starts = np.linspace(-U_MAX, U_MAX, NUM_BINS, endpoint=False)
+    plt.plot(bin_starts, u_intensities[:, 1])
+    plt.grid(True)
+    plt.show()
+
+def flatten_spike(u_intens: list[float], n: int) -> list[float]:
+    # average the middle n bins
+    indices = np.arange(int((NUM_BINS-n)/2), int((NUM_BINS+n)/2), 1)
+    print(f"middle bit: {u_intens[indices,1]}")
+    av = np.mean(u_intens[indices, 1])
+    print(f"indices, av: {indices}, {av}")
+    flattened = np.copy(u_intens)
+    for i in indices:
+        flattened[i] = av
+    return flattened
 
 bg = make_brightness_grid()
 generate_disk_img(bg, adjust_contrast=True)
-u_intents = make_u_intensities(bg, plot=True)
-print(u_intents[int(NUM_BINS/2) - 4:int(NUM_BINS/2) + 5])
+
+
+u_intens = make_u_intensities(bg)
+# print(u_intens[int(NUM_BINS/2) - 2:int(NUM_BINS/2) + 3])
+plot_u_intensities(u_intens)
+
+flattened_u_i = flatten_spike(u_intens, 2)
+# print(flattened_u_i[int(NUM_BINS/2) - 2:int(NUM_BINS/2) + 3])
+plot_u_intensities(flattened_u_i)
