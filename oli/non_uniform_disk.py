@@ -1,10 +1,11 @@
 import numpy as np, matplotlib.pyplot as plt, math
+from scipy.ndimage import gaussian_filter1d
 
 # Constants
 RADIUS = 10 # metres
 DISK_RES = 200 # pixels per metre
 PIX_RADIUS = RADIUS * DISK_RES
-NUM_BINS = int(56 * PIX_RADIUS ** (1/3))
+NUM_BINS = int(56 * PIX_RADIUS ** (1/3)) # Freedman rule
 U_MAX = 5.0 / math.sqrt(RADIUS)
 BIN_WIDTH = 2 * U_MAX / NUM_BINS
 ALPHA = 0.4
@@ -111,14 +112,26 @@ def flatten_spike(u_intens: list[float], n: int) -> list[float]:
         flattened[i] = av
     return flattened
 
+def perf_gauss_smooth(u_intens: list[float], sigma: float) -> list[float]:
+    old_brightness = u_intens[:,1]
+    new_brightness = gaussian_filter1d(old_brightness, sigma)
+    smoothed_intens = np.copy(u_intens)
+    smoothed_intens[:,1] = new_brightness
+    return smoothed_intens
+
 bg = make_brightness_grid()
-generate_disk_img(bg, adjust_contrast=True)
+# generate_disk_img(bg, adjust_contrast=True)
 
 
 u_intens = make_u_intensities(bg)
 # print(u_intens[int(NUM_BINS/2) - 2:int(NUM_BINS/2) + 3])
 plot_u_intensities(u_intens)
 
-flattened_u_i = flatten_spike(u_intens, 2)
+s_u_intens = perf_gauss_smooth(u_intens, 15)
+# print(u_intens[int(NUM_BINS/2) - 2:int(NUM_BINS/2) + 3])
+plot_u_intensities(s_u_intens)
+
+
+# flattened_u_i = flatten_spike(u_intens, 2)
 # print(flattened_u_i[int(NUM_BINS/2) - 2:int(NUM_BINS/2) + 3])
-plot_u_intensities(flattened_u_i)
+# plot_u_intensities(flattened_u_i)
