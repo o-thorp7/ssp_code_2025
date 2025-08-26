@@ -11,7 +11,7 @@ U_MAX = 5.0 / np.sqrt(OUTER_RAD)
 U_MIN = 1e-9
 BIN_WIDTH = 2 * U_MAX / NUM_BINS
 # ALPHA = 1.5
-DELTA_U = 4
+DELTA_U = 12
 SIGMA = DELTA_U / np.sqrt(8 * np.log(2)) # from Wikipedia
 
 def get_u(x, y):
@@ -144,6 +144,15 @@ def plot_u_intensities(u_intensities: list[tuple[float, float]]) -> None:
     plt.grid(True)
     plt.show()
 
+def plot_mult_intens(intens_lst: list[list[tuple[float, float]]]) -> None:
+    bin_starts = np.linspace(-U_MAX, U_MAX, NUM_BINS, endpoint=False)
+
+    for u_intensities in intens_lst:
+        plt.plot(bin_starts, u_intensities[:, 1])
+    
+    plt.grid(True)
+    plt.show()
+
 def flatten_spike(u_intens: list[tuple[float, float]], n: int) -> list[tuple[float, float]]:
     # average the middle n bins
     indices = np.arange(int((NUM_BINS-n)/2), int((NUM_BINS+n)/2), 1)
@@ -174,21 +183,22 @@ def one_minus(x: float) -> float:
     return np.sqrt(1-x**2)
 
 def I_smak(alpha: float, x: float) -> float:
+    # print(f"I_smak: {alpha}")
     if alpha == 0:
         return (
-            -1 * (x**3 / 4 + 3*x / 8) * one_minus(x) +
+            -(x**3 / 4 + 3*x / 8) * one_minus(x) +
             3/8 * np.asin(x)
         )
     elif alpha == 0.5:
         return 1/3 * one_minus(x)**3 - one_minus(x)
     elif alpha == 1.0:
-        return -x/2
+        return -x/2 * one_minus(x) + 1/2 * np.asin(x)
     elif alpha == 1.5:
-        pass
+        return - one_minus(x)
     elif alpha == 2.0:
-        pass
+        return np.asin(x)
     elif alpha == 2.5:
-        return
+        return np.log((1 - one_minus(x)) / x)
     else:
         raise Exception("alpha should be in 0, 0.5, ..., 2.5")
 
@@ -197,6 +207,7 @@ def F_smak(u: float, alpha: float) -> float:
     if abs(u) > 1:
         x_z = np.sign(u)
     x_1 = u * np.sqrt(INNER_RAD)
+    # print(f"F_smak: {alpha}")
     return (u**(2 * alpha - 5)) * (I_smak(alpha, x_z) - I_smak(alpha, x_1))
 
 def make_smak_intens(alpha: float = 0) -> list[tuple[float, float]]:
@@ -206,7 +217,8 @@ def make_smak_intens(alpha: float = 0) -> list[tuple[float, float]]:
 
     for i in range(NUM_BINS):
         u = i * BIN_WIDTH - U_MAX
-        print(f"u = {u} at {i}-th bin")
+        # print(f"u = {u} at {i}-th bin")
+        # print(f"make_smak_intens: {alpha}")
         smak_intens[i, 1] = F_smak(u, alpha)
     
     return smak_intens
@@ -219,17 +231,22 @@ bg = make_brightness_grid(is_shifted=False)
 # generate_disk_img(bg, adjust_contrast=False)
 
 
-generate_disk_img(make_u_grid(), adjust_contrast=True)
+# generate_disk_img(make_u_grid(), adjust_contrast=True)
 
 
 u_intens = make_u_intensities(bg)
-plot_u_intensities(u_intens)
+smak_intens = make_smak_intens()
+
+norm_smak_intens = normalise_u_intens(smak_intens)
+norm_u_intens = normalise_u_intens(u_intens)
 
 s_u_intens = perf_gauss_smooth(u_intens, sigma=SIGMA)
-plot_u_intensities(s_u_intens)
+s_smak_intens = perf_gauss_smooth(smak_intens, sigma=SIGMA)
 
-s_norm_intens = normalise_u_intens(s_u_intens)
-plot_u_intensities(s_norm_intens)
+s_norm_u_intens = normalise_u_intens(s_u_intens)
+s_norm_smak_intens = normalise_u_intens(s_smak_intens)
 
-# flattened_u_i = flatten_spike(u_intens, 4)
-# plot_u_intensities(flattened_u_i)
+# plot_u_intensities(u_intens)
+
+plot_mult_intens([norm_u_intens, norm_smak_intens])
+plot_mult_intens([s_norm_u_intens, s_norm_smak_intens])
